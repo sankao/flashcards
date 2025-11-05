@@ -7,7 +7,10 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🎮 Aventure des Caractères Chinois 漢字冒險 🎮</h1>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h1 style="margin: 0;">🎮 Aventure des Caractères Chinois 漢字冒險 🎮</h1>
+                <button class="btn btn-secondary" style="padding: 8px 16px; margin: 0;" onclick="logout()">Déconnexion</button>
+            </div>
             <div class="stats">
                 <div class="stat-box">📚 Total de Cartes : <span id="totalCards">0</span></div>
                 <div class="stat-box">⭐ Série : <span id="streak">0</span></div>

@@ -63,9 +63,17 @@ function startFallingGame() {
         // Pick a new target card
         targetCard = flashcards[Math.floor(Math.random() * flashcards.length)];
 
+        // Get pronunciation (pinyin and/or zhuyin)
+        let pronunciation = '';
+        if (targetCard.pinyin && targetCard.zhuyin) {
+            pronunciation = `${targetCard.pinyin} / ${targetCard.zhuyin}`;
+        } else {
+            pronunciation = targetCard.pinyin || targetCard.zhuyin || '';
+        }
+
         // Update the target display
         document.getElementById('targetDisplay').innerHTML = `
-            Trouvez : <span style="color: #f5576c;">${targetCard.pinyin}</span> (${targetCard.meaning})
+            Trouvez : <span style="color: #f5576c;">${pronunciation}</span> (${targetCard.meaning})
         `;
 
         // Generate a set of 5 cards that includes the target

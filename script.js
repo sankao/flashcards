@@ -9,8 +9,8 @@ let sessionStats = {
 };
 
 // Initialize
-window.onload = function() {
-    loadData();
+window.onload = async function() {
+    await loadData();
     updateStats();
     if (flashcards.length > 0) {
         goToMenu();
@@ -18,82 +18,111 @@ window.onload = function() {
 };
 
 // Data Management
-function loadData() {
-    const saved = localStorage.getItem('chineseFlashcards');
-    if (saved) {
-        flashcards = JSON.parse(saved);
+async function loadData() {
+    try {
+        const response = await fetch('/api/flashcards');
+        if (response.ok) {
+            flashcards = await response.json();
+        } else if (response.status === 401) {
+            window.location.href = '/login.html';
+        }
+    } catch (error) {
+        console.error('Erreur lors du chargement des données:', error);
     }
 }
 
-function saveData() {
-    localStorage.setItem('chineseFlashcards', JSON.stringify(flashcards));
+async function saveData() {
+    // Data is saved automatically via API calls, just update stats
     updateStats();
 }
 
-function importPastedData() {
+async function importPastedData() {
     const text = document.getElementById('pasteInput').value;
     const lines = text.split('\n').filter(line => line.trim());
 
-    lines.forEach(line => {
+    for (const line of lines) {
         const parts = line.split(',').map(p => p.trim());
         if (parts.length >= 3) {
-            addCard(parts[0], parts[1], parts[2]);
+            // Format: character,pinyin,meaning OR character,pinyin,zhuyin,meaning
+            const character = parts[0];
+            const pinyin = parts[1];
+            const zhuyin = parts.length >= 4 ? parts[2] : '';
+            const meaning = parts.length >= 4 ? parts[3] : parts[2];
+            await addCard(character, pinyin, meaning, zhuyin);
         }
-    });
+    }
 
     document.getElementById('pasteInput').value = '';
+    await loadData();
     updateCardList();
 }
 
-function importCSV(event) {
+async function importCSV(event) {
     const file = event.target.files[0];
     const reader = new FileReader();
 
-    reader.onload = function(e) {
+    reader.onload = async function(e) {
         const text = e.target.result;
         const lines = text.split('\n').filter(line => line.trim());
 
-        lines.forEach(line => {
+        for (const line of lines) {
             const parts = line.split(',').map(p => p.trim());
             if (parts.length >= 3) {
-                addCard(parts[0], parts[1], parts[2]);
+                // Format: character,pinyin,meaning OR character,pinyin,zhuyin,meaning
+                const character = parts[0];
+                const pinyin = parts[1];
+                const zhuyin = parts.length >= 4 ? parts[2] : '';
+                const meaning = parts.length >= 4 ? parts[3] : parts[2];
+                await addCard(character, pinyin, meaning, zhuyin);
             }
-        });
+        }
 
+        await loadData();
         updateCardList();
     };
 
     reader.readAsText(file);
 }
 
-function addManualCard() {
+async function addManualCard() {
     const char = document.getElementById('manualChar').value.trim();
     const pinyin = document.getElementById('manualPinyin').value.trim();
     const meaning = document.getElementById('manualMeaning').value.trim();
 
     if (char && pinyin && meaning) {
-        addCard(char, pinyin, meaning);
+        await addCard(char, pinyin, meaning);
         document.getElementById('manualChar').value = '';
         document.getElementById('manualPinyin').value = '';
         document.getElementById('manualMeaning').value = '';
+        await loadData();
         updateCardList();
     }
 }
 
-function addCard(character, pinyin, meaning) {
-    const card = {
-        character,
-        pinyin,
-        meaning,
-        level: 0,
-        lastReview: null,
-        nextReview: new Date().toISOString(),
-        correctCount: 0,
-        incorrectCount: 0,
-        streak: 0
-    };
-    flashcards.push(card);
-    saveData();
+async function addCard(character, pinyin, meaning, zhuyin = '') {
+    try {
+        const response = await fetch('/api/flashcards', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                character,
+                pinyin,
+                zhuyin,
+                meaning
+            })
+        });
+
+        if (response.ok) {
+            const card = await response.json();
+            return card;
+        } else {
+            console.error('Erreur lors de l\'ajout de la carte');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+    }
 }
 
 function updateCardList() {
@@ -103,8 +132,19 @@ function updateCardList() {
     flashcards.forEach((card, index) => {
         const item = document.createElement('div');
         item.className = 'card-item';
+
+        // Display pinyin and/or zhuyin
+        let pronunciation = '';
+        if (card.pinyin && card.zhuyin) {
+            pronunciation = `${card.pinyin} / ${card.zhuyin}`;
+        } else if (card.pinyin) {
+            pronunciation = card.pinyin;
+        } else if (card.zhuyin) {
+            pronunciation = card.zhuyin;
+        }
+
         item.innerHTML = `
-            <span><strong>${card.character}</strong> (${card.pinyin}) - ${card.meaning}</span>
+            <span><strong>${card.character}</strong> (${pronunciation}) - ${card.meaning}</span>
             <button class="btn btn-secondary" style="padding: 5px 15px; margin: 0;" onclick="removeCard(${index})">Supprimer</button>
         `;
         list.appendChild(item);
@@ -113,16 +153,30 @@ function updateCardList() {
     document.getElementById('startBtn').disabled = flashcards.length === 0;
 }
 
-function removeCard(index) {
-    flashcards.splice(index, 1);
-    saveData();
-    updateCardList();
+async function removeCard(index) {
+    const card = flashcards[index];
+    try {
+        const response = await fetch(`/api/flashcards/${card.id}`, {
+            method: 'DELETE'
+        });
+
+        if (response.ok) {
+            await loadData();
+            updateCardList();
+        }
+    } catch (error) {
+        console.error('Erreur lors de la suppression:', error);
+    }
 }
 
 function exportData() {
-    const csvContent = flashcards.map(card =>
-        `${card.character},${card.pinyin},${card.meaning}`
-    ).join('\n');
+    const csvContent = flashcards.map(card => {
+        if (card.pinyin && card.zhuyin) {
+            return `${card.character},${card.pinyin},${card.zhuyin},${card.meaning}`;
+        } else {
+            return `${card.character},${card.pinyin || card.zhuyin},${card.meaning}`;
+        }
+    }).join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
@@ -132,13 +186,22 @@ function exportData() {
     a.click();
 }
 
-function clearAllData() {
+async function clearAllData() {
     if (confirm('Êtes-vous sûr de vouloir supprimer toutes les cartes et la progression ?')) {
-        flashcards = [];
-        sessionStats = { correct: 0, incorrect: 0, streak: 0 };
-        localStorage.clear();
-        updateStats();
-        updateCardList();
+        try {
+            const response = await fetch('/api/flashcards/clear', {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                flashcards = [];
+                sessionStats = { correct: 0, incorrect: 0, streak: 0 };
+                updateStats();
+                updateCardList();
+            }
+        } catch (error) {
+            console.error('Erreur lors de la suppression:', error);
+        }
     }
 }
 
@@ -194,7 +257,7 @@ function getIntervalDays(level) {
     return intervals[Math.min(level, intervals.length - 1)];
 }
 
-function cardAnswered(card, correct) {
+async function cardAnswered(card, correct) {
     const now = new Date();
     card.lastReview = now.toISOString();
 
@@ -217,12 +280,47 @@ function cardAnswered(card, correct) {
     nextReview.setDate(nextReview.getDate() + daysToAdd);
     card.nextReview = nextReview.toISOString();
 
+    // Save to API
+    try {
+        await fetch(`/api/flashcards/${card.id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                level: card.level,
+                lastReview: card.lastReview,
+                nextReview: card.nextReview,
+                correctCount: card.correctCount,
+                incorrectCount: card.incorrectCount,
+                streak: card.streak
+            })
+        });
+    } catch (error) {
+        console.error('Erreur lors de la mise à jour:', error);
+    }
+
     saveData();
 }
 
 function getDueCards() {
     const now = new Date();
     return flashcards.filter(card => new Date(card.nextReview) <= now);
+}
+
+// Logout function
+async function logout() {
+    try {
+        const response = await fetch('/api/logout', {
+            method: 'POST'
+        });
+
+        if (response.ok) {
+            window.location.href = '/login.html';
+        }
+    } catch (error) {
+        console.error('Erreur lors de la déconnexion:', error);
+    }
 }
 
 // Session Results (Shared by multiple game modes)

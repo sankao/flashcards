@@ -65,11 +65,19 @@ function checkMultipleChoice(correct, answer) {
     const card = flashcards[currentCardIndex];
     cardAnswered(card, correct);
 
+    // Get pronunciation (pinyin and/or zhuyin)
+    let pronunciation = '';
+    if (card.pinyin && card.zhuyin) {
+        pronunciation = `${card.pinyin} / ${card.zhuyin}`;
+    } else {
+        pronunciation = card.pinyin || card.zhuyin || '';
+    }
+
     const feedback = document.getElementById('feedback');
     feedback.className = 'feedback ' + (correct ? 'correct' : 'incorrect');
     feedback.innerHTML = correct ?
-        `🎉 Correct ! ${card.character} (${card.pinyin}) = ${card.meaning}` :
-        `❌ Oups ! ${card.character} (${card.pinyin}) = ${card.meaning}<br>Vous avez sélectionné : ${answer}`;
+        `🎉 Correct ! ${card.character} (${pronunciation}) = ${card.meaning}` :
+        `❌ Oups ! ${card.character} (${pronunciation}) = ${card.meaning}<br>Vous avez sélectionné : ${answer}`;
 
     document.getElementById('choiceButtons').style.display = 'none';
 

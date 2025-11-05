@@ -26,6 +26,14 @@ function showFlashcard(cards) {
     const card = cards[currentCardIndex];
     const content = document.getElementById('gameContent');
 
+    // Get pronunciation (pinyin and/or zhuyin)
+    let pronunciation = '';
+    if (card.pinyin && card.zhuyin) {
+        pronunciation = `${card.pinyin} / ${card.zhuyin}`;
+    } else {
+        pronunciation = card.pinyin || card.zhuyin || '';
+    }
+
     content.innerHTML = `
         <div class="progress-bar">
             <div class="progress-fill" style="width: ${(currentCardIndex / cards.length) * 100}%">
@@ -36,7 +44,7 @@ function showFlashcard(cards) {
         <div class="flashcard" id="flashcardDisplay">
             <div class="character">${card.character}</div>
             <div id="flashcardInfo" class="hidden">
-                <div class="pinyin">${card.pinyin}</div>
+                <div class="pinyin">${pronunciation}</div>
                 <div class="meaning">${card.meaning}</div>
             </div>
             <button class="btn" onclick="revealAnswer()">Afficher la Réponse 👀</button>
