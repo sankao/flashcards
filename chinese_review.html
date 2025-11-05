@@ -1,0 +1,109 @@
+<!DOCTYPE html><html lang="zh-Hant"><head><meta name="x-poe-datastore-behavior" content="local_only"><meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://code.jquery.com https://unpkg.com https://d3js.org https://threejs.org https://cdn.plot.ly https://stackpath.bootstrapcdn.com https://maps.googleapis.com https://cdn.tailwindcss.com https://ajax.googleapis.com https://kit.fontawesome.com https://cdn.datatables.net https://maxcdn.bootstrapcdn.com https://code.highcharts.com https://tako-static-assets-production.s3.amazonaws.com https://www.youtube.com https://fonts.googleapis.com https://fonts.gstatic.com https://pfst.cf2.poecdn.net https://puc.poecdn.net https://i.imgur.com https://wikimedia.org https://*.icons8.com https://*.giphy.com https://picsum.photos https://images.unsplash.com; frame-src 'self' https://www.youtube.com https://trytako.com; child-src 'self'; manifest-src 'self'; worker-src 'self'; upgrade-insecure-requests; block-all-mixed-content;">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aventure des Caractères Chinois 漢字冒險</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎮 Aventure des Caractères Chinois 漢字冒險 🎮</h1>
+            <div class="stats">
+                <div class="stat-box">📚 Total de Cartes : <span id="totalCards">0</span></div>
+                <div class="stat-box">⭐ Série : <span id="streak">0</span></div>
+                <div class="stat-box">🏆 Score : <span id="score">0</span></div>
+                <div class="stat-box">🎯 Révisions du Jour : <span id="todayReviews">0</span></div>
+            </div>
+        </div>
+
+        <!-- Setup Screen -->
+        <div id="setupScreen" class="setup-screen">
+            <h2 style="color: #667eea; margin-bottom: 20px;">Bienvenue ! Configurons vos cartes mémoire 📝</h2>
+
+            <div class="input-group">
+                <label>Option 1 : Coller la liste de caractères (un par ligne : caractère,pinyin,signification)</label>
+                <textarea id="pasteInput" placeholder="Exemple :
+你好,nǐ hǎo,bonjour
+謝謝,xièxie,merci
+再見,zàijiàn,au revoir"></textarea>
+                <button class="btn btn-success" onclick="importPastedData()">Importer depuis le texte</button>
+            </div>
+
+            <div style="text-align: center; margin: 20px 0; font-weight: bold; color: #667eea;">OU</div>
+
+            <div class="file-upload" onclick="document.getElementById('csvFile').click()">
+                <p style="font-size: 1.2em; margin-bottom: 10px;">📁 Option 2 : Télécharger un fichier CSV</p>
+                <p style="color: #888;">Cliquez pour sélectionner un fichier CSV (caractère,pinyin,signification)</p>
+                <input type="file" id="csvFile" accept=".csv" style="display: none;" onchange="importCSV(event)">
+            </div>
+
+            <div style="text-align: center; margin: 20px 0; font-weight: bold; color: #667eea;">OU</div>
+
+            <div class="input-group">
+                <label>Option 3 : Ajouter des cartes manuellement</label>
+                <input type="text" id="manualChar" placeholder="Caractère (漢字)">
+                <input type="text" id="manualPinyin" placeholder="Pinyin">
+                <input type="text" id="manualMeaning" placeholder="Signification">
+                <button class="btn btn-secondary" onclick="addManualCard()">Ajouter une Carte</button>
+            </div>
+
+            <div class="card-list" id="cardList"></div>
+
+            <div style="text-align: center; margin-top: 20px;">
+                <button class="btn" onclick="startLearning()" id="startBtn" disabled="">Commencer l'Apprentissage ! 🚀</button>
+                <button class="btn btn-secondary" onclick="exportData()">Exporter les Données 💾</button>
+                <button class="btn btn-secondary" onclick="clearAllData()">Effacer Toutes les Données 🗑️</button>
+            </div>
+        </div>
+
+        <!-- Main Menu -->
+        <div id="mainMenu" class="main-menu hidden">
+            <h2 style="color: #667eea; margin-bottom: 20px; text-align: center;">Choisissez Votre Mode de Jeu ! 🎯</h2>
+
+            <div class="game-grid">
+                <div class="game-card" onclick="startFlashcardMode()">
+                    <h3>📇 Révision des Cartes</h3>
+                    <p>Révision par répétition espacée classique</p>
+                    <p style="color: #f5576c; font-weight: bold; margin-top: 10px;">À réviser : <span id="dueCards">0</span> cartes</p>
+                </div>
+
+                <div class="game-card" onclick="startMatchingGame()">
+                    <h3>🎴 Jeu de Mémoire</h3>
+                    <p>Associez les caractères avec leurs significations</p>
+                </div>
+
+                <div class="game-card" onclick="startFallingGame()">
+                    <h3>🌟 Caractères Tombants</h3>
+                    <p>Attrapez le bon caractère !</p>
+                </div>
+
+                <div class="game-card" onclick="startMultipleChoice()">
+                    <h3>✅ Choix Multiple</h3>
+                    <p>Testez vos connaissances</p>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 20px;">
+                <button class="btn btn-secondary" onclick="goToSetup()">Gérer les Cartes 📝</button>
+            </div>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="gameScreen" class="game-screen hidden">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <button class="btn btn-secondary" onclick="returnToMenu()">← Retour au Menu</button>
+            </div>
+            
+            <div id="gameContent"></div>
+        </div>
+    </div>
+
+    <!-- Core functionality -->
+    <script src="script.js"></script>
+    <!-- Game modes -->
+    <script src="flashcard-game.js"></script>
+    <script src="matching-game.js"></script>
+    <script src="falling-game.js"></script>
+    <script src="multiple-choice-game.js"></script>
+</body>
+</html>
